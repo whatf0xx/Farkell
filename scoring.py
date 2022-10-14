@@ -1,16 +1,75 @@
-def combo_of_6(counts: list[int]) -> tuple[str, int]:
+"""
+Calculate the score for a given hand in Farkell. Should take as input the hand
+as a list of ints between 1 and 6 (inclusive, obviously) and return a list of tuples of
+the score as an int, and the dice that score as another list of ints.
+"""
+
+
+def count(dice: list[int]) -> dict[int: int]:
+    return {i: dice.count(i) for i in range(1, 7)}
+
+
+def score_misc(dice: list[int]) -> list[tuple[int, list[int]]]:
+    """
+    Score a hand of dice which has no combinations, i.e. it has only single or double 1s and 5s.
+
+    :param dice: the hand of dice to score
+    :return: the score breakdown. Each list element is a scoring part of the hand (these are always unique
+             and don't overlap): first the score, and then the dice that contribute to that score.
+    """
+    score = []
+    for die in dice:
+        if die == 1:
+            score.append((100, [1]))
+        elif die == 5:
+            score.append((50, [5]))
+
+    return score
+
+
+def score_combos(dice: list[int]) -> tuple[int, list[int]]:
+    """
+    Score the combos in a hand of dice, excluding the 6-dice combos, i.e. the provided roll does not have
+    2 triples, a straight etc.
+
+    :param dice: the hand of dice to score
+    :return: the score breakdown. As only one combo per roll is possible, only the tuple of the score with
+             the associated dice is returned.
+    """
+    counts = count(dice)
+    length = len(dice)
+
+    for i in counts:
+        match counts[i]:
+            case 3:
+                if i == 1:
+                    return 300, [1, 1, 1]
+                return i * 100, [i, i, i]
+            case 4:
+                return 1000, [i] * 4
+            case 5:
+                return 2000, [i] * 5
+            case 6:
+                return 3000, [i] * 6
+            case _:
+                pass
+
+    return 0, []
+
+
+def combo_of_6(counts: list[int]) -> tuple[str, int, int]:
     """Calculate scores for combinations of 6 dice."""
     if counts.count(1) == 6:
-        return "1-6 STRAIGHT", 1500
+        return "1-6 STRAIGHT", 1500, 6
     elif counts.count(3) == 2:
-        return "2 TRIPLES", 2500
+        return "2 TRIPLES", 2500, 6
     elif counts.count(2) == 3 or (counts.count(4) == 1 and counts.count(2) == 1):
         """For clarification, a 4-of-a-kind with a double counts as a 3-pair."""
-        return "3 PAIRS", 1500
+        return "3 PAIRS", 1500, 6
     elif counts.count(6) == 1:
-        return "6-OF-A-KIND", 3000
+        return "6-OF-A-KIND", 3000, 6
     else:
-        return "", 0
+        return "", 0, 6
 
 
 def score_single(die: int) -> tuple[str, int]:
