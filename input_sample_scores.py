@@ -2,8 +2,6 @@ from itertools import product, cycle
 from random import randint
 import pickle
 
-import game
-
 exists = True
 no_samples = 50
 
@@ -18,7 +16,7 @@ i, prev_roll = 0, 0
 for roll in cycle(product(range(1, 7), repeat=6)):
     r = randint(1, 4993)
     if r == 1:
-        rolls[roll] = input(sorted(roll))
+        rolls[roll] = int(input(sorted(roll)))
         if rolls[roll] == -1:
             del rolls[roll]
             del rolls[prev_roll]
