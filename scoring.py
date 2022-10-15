@@ -38,7 +38,6 @@ def score_combos(dice: list[int]) -> tuple[int, list[int]]:
     """
     counts = count(dice)
     length = len(dice)
-
     for i in counts:
         match counts[i]:
             case 3:
@@ -57,19 +56,19 @@ def score_combos(dice: list[int]) -> tuple[int, list[int]]:
     return 0, []
 
 
-def combo_of_6(counts: list[int]) -> tuple[str, int, int]:
+def combo_of_6(counts: list[int]) -> tuple[str, int]:
     """Calculate scores for combinations of 6 dice."""
     if counts.count(1) == 6:
-        return "1-6 STRAIGHT", 1500, 6
+        return "1-6 STRAIGHT", 1500
     elif counts.count(3) == 2:
-        return "2 TRIPLES", 2500, 6
+        return "2 TRIPLES", 2500
     elif counts.count(2) == 3 or (counts.count(4) == 1 and counts.count(2) == 1):
         """For clarification, a 4-of-a-kind with a double counts as a 3-pair."""
-        return "3 PAIRS", 1500, 6
+        return "3 PAIRS", 1500
     elif counts.count(6) == 1:
-        return "6-OF-A-KIND", 3000, 6
+        return "6-OF-A-KIND", 3000
     else:
-        return "", 0, 6
+        return "", 0
 
 
 def score_single(die: int) -> tuple[str, int]:

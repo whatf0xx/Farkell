@@ -65,7 +65,34 @@ class Roll:
 @dataclass
 class Hand:
     """
-
+    Class for a hand in the game.
     """
     dice: Roll
     bank: int
+
+    def get_score(self) -> list[tuple[int, list[int]]]:
+        """Method to get the potential scoring options for the hand. Should return a list of tuples,
+        containing the scores for each combo as well as the dice involved."""
+        """ First, check if there are any combos of 6 dice:"""
+        scoring_tuples = []
+        no_dice = len(self.dice.dice)
+        if no_dice == 6:
+            combo_6 = scoring.combo_of_6(list(self.dice.count().values()))
+            if combo_6[0]:
+                return [(combo_6[1], self.dice.dice)]  # if we have a combo of 6, we're done
+
+        combos = scoring.score_combos(self.dice.dice)
+        if combos[1]:
+            scoring_tuples.append(combos)
+            remaining_dice = [dice for dice in self.dice.dice if dice not in combos[1]]
+        else:
+            remaining_dice = self.dice.dice
+
+        misc = scoring.score_misc(remaining_dice)
+        if misc:
+            scoring_tuples.append(misc)
+
+        if scoring_tuples:
+            scoring_tuples.sort()
+            return scoring_tuples
+        return [(0, [])]
