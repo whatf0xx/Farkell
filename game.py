@@ -90,7 +90,7 @@ class Hand:
 
         misc = scoring.score_misc(remaining_dice)
         if misc:
-            scoring_tuples.append(misc)
+            scoring_tuples += misc
 
         if scoring_tuples:
             scoring_tuples.sort()
