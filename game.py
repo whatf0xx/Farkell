@@ -7,7 +7,7 @@ import scoring
 
 class InputType(Flag):
     USER = False
-    ARGS = True
+    COM = True
 
 
 @dataclass
@@ -112,12 +112,16 @@ class Turn:
     """
     roll: Roll
     possible_scores = list[tuple[int, list[int]]]
+    input_type = InputType.COM
     no_dice: int = 6
     bank: int = 0
 
-    def __init__(self, user_input: bool = False):
-        if not user_input:
-            self.roll = Roll()
+    def __init__(self, no_dice: int = 6, input_type: InputType = InputType.USER, bank: int = 0):
+        self.no_dice = no_dice
+        self.input_type = input_type
+        self.bank = bank
+        if input_type == InputType.COM:
+            self.roll = Roll(size=self.no_dice)
         else:
             while True:
                 try:
@@ -166,4 +170,8 @@ class Turn:
                 dice_to_score += score[1]
 
         return Roll(len(dice_to_score), dice_to_score).score_total()[0]
+
+    def reroll(self):
+        bank = self.bank
+        self.__init__(self.no_dice, self.input_type, self.bank)
 
