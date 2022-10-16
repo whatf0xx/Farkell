@@ -8,3 +8,5 @@ if __name__ == "__main__":
     # print(sample_roll.score_breakdown())
 
     sample_turn = game.Turn(True)
+    sample_turn.bank_scores()
+    print(sample_turn.bank, sample_turn.no_dice)

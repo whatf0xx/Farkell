@@ -1,7 +1,13 @@
 from dataclasses import dataclass
 from random import choices
+from enum import Flag
 
 import scoring
+
+
+class InputType(Flag):
+    USER = False
+    ARGS = True
 
 
 @dataclass
@@ -94,6 +100,7 @@ class Roll:
 
         if scoring_tuples:
             scoring_tuples.sort()
+            """N.B. scoring tuples are SORTED, based on the score of the combo."""
             return scoring_tuples
         return []
 
@@ -104,6 +111,7 @@ class Turn:
 
     """
     roll: Roll
+    possible_scores = list[tuple[int, list[int]]]
     no_dice: int = 6
     bank: int = 0
 
@@ -124,8 +132,38 @@ class Turn:
                     for bad_die in dre.dice:
                         print(f"Die {bad_die[0]} has value {bad_die[1]}; out of range (expected 1-6).")
 
-    def bank_scores(self, scores: list[tuple[int, list[int]]]) -> str:
-        dice = []
-        for score in scores:
-            self.bank += score[0]
-        return ""
+        self.possible_scores = self.roll.score_breakdown()
+
+    def bank_scores(self, input_type: InputType = InputType.USER, decisions: list[bool] = None) -> str:
+        if not self.possible_scores:
+            return "HAND SCORES 0!"
+
+        if len(self.possible_scores) == 1:
+            self.bank += self.possible_scores[0][0]
+            self.no_dice -= len(self.possible_scores[0][1])
+            return self.roll.score_total()[0]
+
+        if input_type == InputType.USER:
+            decisions = []
+            decision_map = {'b': True, 'r': False}
+            for score in self.possible_scores:
+                while True:
+                    decision = input(f"combo: {score}. Enter b for BANK or r for RE-ROLL: ")
+                    try:
+                        decisions.append(decision_map[decision])
+                        break
+                    except KeyError:
+                        print("Bad input, you need to choose 'b' or 'r'.")
+
+        if len(decisions) != len(self.possible_scores):
+            raise ValueError("Not all possible scores have a corresponding decision.")
+
+        dice_to_score = []
+        for score, decision in zip(self.possible_scores, decisions):
+            if decision:  # True means we have decided to bank the score
+                self.bank += score[0]
+                self.no_dice -= len(score[1])
+                dice_to_score += score[1]
+
+        return Roll(len(dice_to_score), dice_to_score).score_total()[0]
+
