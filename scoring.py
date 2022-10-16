@@ -37,7 +37,6 @@ def score_combos(dice: list[int]) -> tuple[int, list[int]]:
              the associated dice is returned.
     """
     counts = count(dice)
-    length = len(dice)
     for i in counts:
         match counts[i]:
             case 3:
