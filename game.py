@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from random import choices
 from enum import Flag
+from itertools import cycle
 
 import scoring
 
@@ -30,7 +31,7 @@ class Roll:
     dice: list[int]
 
     def __init__(self, size: int = 6, dice: list[int] = None) -> None:
-        # TODO: Roll.__init__() needs to be brought into line with Turn.__init__()
+        # TODO: Roll.__init__() needs to be brought into line with Turn.__init__().
         self.size = size
         if not dice:
             self.dice = choices([1, 2, 3, 4, 5, 6], k=self.size)
@@ -182,19 +183,25 @@ class Turn:
 @dataclass
 class Player:
     name: str
+    input_type: InputType
     score: int
-    position: int  # N.B. this is for working out whose turn is next, NOT who is in the lead etc.
+
 
 @dataclass
 class Game:
     players: list[Player]
     max_score: int = 10000
-    last_turn: bool = False
+    last_round: bool = False
 
-    def __init__(self, player_names, max_score: int = 10000):
+    def __init__(self, player_names: list[str], player_types: list[InputType] = None, max_score: int = 10000):
         self.players = []
-        for pos, name in enumerate(player_names):
-            self.players.append(Player(name, 0, pos))
+        if not player_types:
+            player_types = [InputType.USER] * len(player_names)
+        else:
+            assert len(player_names) == len(player_types)
+
+        for name, player_type in zip(player_names, player_types):
+            self.players.append(Player(name, player_type, 0))
 
         self.max_score = max_score
 
@@ -208,9 +215,36 @@ class Game:
 
         return msg
 
-    def round(self):
-        """Play a round of the game"""
-        pass
+    def play(self) -> None:
+        final_player, prev_player = None, None
+        for player in cycle(self.players):
+            # TODO: Need to have the condition that it's the players first turn.
+            print(f"***** {player.name}'s turn: *****")
+            turn = Turn(no_dice=6, input_type=player.input_type, bank=0)
+            while True:
+                turn.bank_scores()
+                while True:
+                    play_on = input("Input r for roll again or e for end turn: ")
+                    if play_on == 'r' or 'e':
+                        break
+                    else:
+                        print("Bad input, try again,")
+                match play_on:
+                    case 'r':
+                        turn.reroll()
+                    case 'e':
+                        player.score += turn.bank
+                        break
+
+            if player == final_player:
+                print("*****" + self.get_winner().name + " has won the game! *****")
+
+            if player.score >= self.max_score and not self.last_round:
+                final_player = prev_player
+                self.last_round = True
+
+            elif not self.last_round:
+                prev_player = player  # only need to keep track of this if it's not the final round
 
     def get_winner(self):
         return max(self.players, key=lambda x: x.score)
