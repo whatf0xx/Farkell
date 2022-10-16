@@ -7,8 +7,11 @@ if __name__ == "__main__":
     # print(sample_roll.score_total())
     # print(sample_roll.score_breakdown())
 
-    sample_turn = game.Turn()
-    sample_turn.bank_scores()
-    print(sample_turn.bank, sample_turn.no_dice)
-    sample_turn.reroll()
-    print(sample_turn)
+    # sample_turn = game.Turn()
+    # sample_turn.bank_scores()
+    # print(sample_turn.bank, sample_turn.no_dice)
+    # sample_turn.reroll()
+    # print(sample_turn)
+
+    sample_game = game.Game(["Harry", "Leonie", "Nina", "Dani"])
+    print(sample_game.score_table())

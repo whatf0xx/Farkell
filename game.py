@@ -30,6 +30,7 @@ class Roll:
     dice: list[int]
 
     def __init__(self, size: int = 6, dice: list[int] = None) -> None:
+        # TODO: Roll.__init__() needs to be brought into line with Turn.__init__()
         self.size = size
         if not dice:
             self.dice = choices([1, 2, 3, 4, 5, 6], k=self.size)
@@ -172,6 +173,44 @@ class Turn:
         return Roll(len(dice_to_score), dice_to_score).score_total()[0]
 
     def reroll(self):
-        bank = self.bank
+        if self.no_dice == 0:
+            self.__init__(6, self.input_type, self.bank)
+
         self.__init__(self.no_dice, self.input_type, self.bank)
 
+
+@dataclass
+class Player:
+    name: str
+    score: int
+    position: int  # N.B. this is for working out whose turn is next, NOT who is in the lead etc.
+
+@dataclass
+class Game:
+    players: list[Player]
+    max_score: int = 10000
+    last_turn: bool = False
+
+    def __init__(self, player_names, max_score: int = 10000):
+        self.players = []
+        for pos, name in enumerate(player_names):
+            self.players.append(Player(name, 0, pos))
+
+        self.max_score = max_score
+
+    def score_table(self):
+        msg = "|"
+        for player in self.players:
+            msg += " " + player.name + " " * (9 - len(player.name)) + "|"
+        msg += "\n|"
+        for player in self.players:
+            msg += " " + str(player.score) + " " * (9 - len(str(player.score))) + "|"
+
+        return msg
+
+    def round(self):
+        """Play a round of the game"""
+        pass
+
+    def get_winner(self):
+        return max(self.players, key=lambda x: x.score)
