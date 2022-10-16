@@ -61,6 +61,7 @@ class Roll:
         :return: tuple of (roll name, score)
         """
         match self.size:
+            # TODO: There is so much repeated code here.
             case 1: return scoring.score_single(self.dice[0])
             case 2: return scoring.score_2(self.dice)
             case 3: return scoring.score_3(self.count())
@@ -105,6 +106,23 @@ class Turn:
     roll: Roll
     no_dice: int = 6
     bank: int = 0
+
+    def __init__(self, user_input: bool = False):
+        if not user_input:
+            self.roll = Roll()
+        else:
+            while True:
+                try:
+                    self.roll = Roll(self.no_dice, [int(c) for c in input().split()])
+                    break
+                except HandSizeError as hse:
+                    if self.no_dice < hse.size:
+                        print(f"Too many dice added, {hse.size} added but {self.no_dice} expected.")
+                    else:
+                        print(f"Too few dice added, {hse.size} added but {self.no_dice} expected.")
+                except DiceRangeError as dre:
+                    for bad_die in dre.dice:
+                        print(f"Die {bad_die[0]} has value {bad_die[1]}; out of range (expected 1-6).")
 
     def bank_scores(self, scores: list[tuple[int, list[int]]]) -> str:
         dice = []
