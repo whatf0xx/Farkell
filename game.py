@@ -3,8 +3,6 @@ from random import choices
 
 import scoring
 
-Index = int
-
 
 @dataclass
 class HandSizeError(ValueError):
@@ -13,7 +11,7 @@ class HandSizeError(ValueError):
 
 @dataclass
 class DiceRangeError(ValueError):
-    dice: list[tuple[Index, int]]
+    dice: list[tuple[int, int]]
 
 
 @dataclass
@@ -25,7 +23,7 @@ class Roll:
     size: int
     dice: list[int]
 
-    def __init__(self, size: int = 6, dice: list[int] = None):
+    def __init__(self, size: int = 6, dice: list[int] = None) -> None:
         self.size = size
         if not dice:
             self.dice = choices([1, 2, 3, 4, 5, 6], k=self.size)
@@ -33,7 +31,7 @@ class Roll:
             self.dice = dice
             self.check()
 
-    def check(self):
+    def check(self) -> None:
         """Check that there are the correct number of dice."""
         no_dice = len(self.dice)
         if no_dice != self.size:
@@ -48,10 +46,20 @@ class Roll:
             raise DiceRangeError(dice=bad_dice)
 
     def count(self) -> dict[int: int]:
+        """
+        Get the frequency of each dice in the roll.
+
+        :return: dictionary of [die: occurrences] (both ints)
+        """
         allowed_dice = range(1, 7)
         return {i: self.dice.count(i) for i in allowed_dice}
 
-    def score(self) -> tuple[str, int]:
+    def score_total(self) -> tuple[str, int]:
+        """
+        Get the maximum score for a single roll, and name the score.
+
+        :return: tuple of (roll name, score)
+        """
         match self.size:
             case 1: return scoring.score_single(self.dice[0])
             case 2: return scoring.score_2(self.dice)
@@ -61,32 +69,23 @@ class Roll:
             case 6: return scoring.score_6(self.count())
             case _: raise HandSizeError(size=self.size)
 
-
-@dataclass
-class Hand:
-    """
-    Class for a hand in the game.
-    """
-    dice: Roll
-    bank: int
-
-    def get_score(self) -> list[tuple[int, list[int]]]:
+    def score_breakdown(self) -> list[tuple[int, list[int]]]:
         """Method to get the potential scoring options for the hand. Should return a list of tuples,
         containing the scores for each combo as well as the dice involved."""
         """ First, check if there are any combos of 6 dice:"""
         scoring_tuples = []
-        no_dice = len(self.dice.dice)
+        no_dice = len(self.dice)
         if no_dice == 6:
-            combo_6 = scoring.combo_of_6(list(self.dice.count().values()))
+            combo_6 = scoring.combo_of_6(list(self.count().values()))
             if combo_6[0]:
-                return [(combo_6[1], self.dice.dice)]  # if we have a combo of 6, we're done
+                return [(combo_6[1], self.dice)]  # if we have a combo of 6, we're done
 
-        combos = scoring.score_combos(self.dice.dice)
+        combos = scoring.score_combos(self.dice)
         if combos[1]:
             scoring_tuples.append(combos)
-            remaining_dice = [dice for dice in self.dice.dice if dice not in combos[1]]
+            remaining_dice = [dice for dice in self.dice if dice not in combos[1]]
         else:
-            remaining_dice = self.dice.dice
+            remaining_dice = self.dice
 
         misc = scoring.score_misc(remaining_dice)
         if misc:
@@ -95,4 +94,20 @@ class Hand:
         if scoring_tuples:
             scoring_tuples.sort()
             return scoring_tuples
-        return [(0, [])]
+        return []
+
+
+@dataclass
+class Turn:
+    """
+
+    """
+    roll: Roll
+    no_dice: int = 6
+    bank: int = 0
+
+    def bank_scores(self, scores: list[tuple[int, list[int]]]) -> str:
+        dice = []
+        for score in scores:
+            self.bank += score[0]
+        return ""
