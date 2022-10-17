@@ -13,5 +13,5 @@ if __name__ == "__main__":
     # sample_turn.reroll()
     # print(sample_turn)
 
-    sample_game = game.Game(["Harry", "Leonie", "Nina", "Dani"], max_score=500)
-    print(sample_game.play())
+    # sample_game = game.Game(["Harry", "Leonie", "Nina", "Dani"], max_score=500)
+    # print(sample_game.play())

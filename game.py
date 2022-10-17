@@ -1,7 +1,6 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from random import choices
 from enum import Flag
-from itertools import cycle
 
 import scoring
 
@@ -27,22 +26,25 @@ class Roll:
     Class for a roll on a given turn, to ensure that the roll is a legal combination of dice. Also provides
     functionality for gathering the rolled dice, from user input or from the random module.
     """
-    size: int
-    dice: list[int]
+    input_type: InputType = InputType.COM
+    no_dice: int = 6
+    """N.B. the default 'roll' of dice should be an empty list which is then populated with the Roll.roll() method."""
+    dice: list[int] = field(default_factory=list)
 
-    def __init__(self, size: int = 6, dice: list[int] = None) -> None:
-        # TODO: Roll.__init__() needs to be brought into line with Turn.__init__().
-        self.size = size
-        if not dice:
-            self.dice = choices([1, 2, 3, 4, 5, 6], k=self.size)
+    def roll(self, dice: list[int] = None) -> None:
+        if self.input_type == InputType.COM:
+            self.dice = choices([1, 2, 3, 4, 5, 6], k=self.no_dice)
         else:
             self.dice = dice
             self.check()
 
+    def remove_dice(self, dice_to_remove) -> None:
+        self.no_dice -= dice_to_remove
+
     def check(self) -> None:
         """Check that there are the correct number of dice."""
         no_dice = len(self.dice)
-        if no_dice != self.size:
+        if no_dice != self.no_dice:
             raise HandSizeError(size=no_dice)
 
         """Check that the dice are within the expected range."""
@@ -68,7 +70,7 @@ class Roll:
 
         :return: tuple of (roll name, score)
         """
-        match self.size:
+        match self.no_dice:
             # TODO: There is so much repeated code here.
             case 1: return scoring.score_single(self.dice[0])
             case 2: return scoring.score_2(self.dice)
@@ -76,7 +78,7 @@ class Roll:
             case 4: return scoring.score_4(self.count())
             case 5: return scoring.score_5(self.count())
             case 6: return scoring.score_6(self.count())
-            case _: raise HandSizeError(size=self.size)
+            case _: raise HandSizeError(size=self.no_dice)
 
     def score_breakdown(self) -> list[tuple[int, list[int]]]:
         """Method to get the potential scoring options for the hand. Should return a list of tuples,
@@ -108,135 +110,106 @@ class Roll:
 
 
 @dataclass
-class Turn:
-    """
-
-    """
-    roll: Roll
-    possible_scores = list[tuple[int, list[int]]]
-    input_type = InputType.COM
-    no_dice: int = 6
-    bank: int = 0
-
-    def __init__(self, no_dice: int = 6, input_type: InputType = InputType.USER, bank: int = 0):
-        self.no_dice = no_dice
-        self.input_type = input_type
-        self.bank = bank
-        if input_type == InputType.COM:
-            self.roll = Roll(size=self.no_dice)
-        else:
-            while True:
-                try:
-                    self.roll = Roll(self.no_dice, [int(c) for c in input().split()])
-                    break
-                except HandSizeError as hse:
-                    if self.no_dice < hse.size:
-                        print(f"Too many dice added, {hse.size} added but {self.no_dice} expected.")
-                    else:
-                        print(f"Too few dice added, {hse.size} added but {self.no_dice} expected.")
-                except DiceRangeError as dre:
-                    for bad_die in dre.dice:
-                        print(f"Die {bad_die[0]} has value {bad_die[1]}; out of range (expected 1-6).")
-
-        self.possible_scores = self.roll.score_breakdown()
-
-    def bank_scores(self, input_type: InputType = InputType.USER, decisions: list[bool] = None) -> str:
-        if not self.possible_scores:
-            return "HAND SCORES 0!"
-
-        if len(self.possible_scores) == 1:
-            self.bank += self.possible_scores[0][0]
-            self.no_dice -= len(self.possible_scores[0][1])
-            return self.roll.score_total()[0]
-
-        if input_type == InputType.USER:
-            decisions = []
-            decision_map = {'b': True, 'r': False}
-            for score in self.possible_scores:
-                while True:
-                    decision = input(f"combo: {score}. Enter b for BANK or r for RE-ROLL: ")
-                    try:
-                        decisions.append(decision_map[decision])
-                        break
-                    except KeyError:
-                        print("Bad input, you need to choose 'b' or 'r'.")
-
-        if len(decisions) != len(self.possible_scores):
-            raise ValueError("Not all possible scores have a corresponding decision.")
-
-        dice_to_score = []
-        for score, decision in zip(self.possible_scores, decisions):
-            if decision:  # True means we have decided to bank the score
-                self.bank += score[0]
-                self.no_dice -= len(score[1])
-                dice_to_score += score[1]
-
-        return Roll(len(dice_to_score), dice_to_score).score_total()[0]
-
-    def reroll(self):
-        if self.no_dice == 0:
-            self.__init__(6, self.input_type, self.bank)
-
-        self.__init__(self.no_dice, self.input_type, self.bank)
-
-
-@dataclass
 class Player:
     name: str
+    position: int  # where the player is 'sat' in the circle, not how well he is doing etc.
     input_type: InputType
     score: int
 
 
-@dataclass
 class Game:
-    players: list[Player]
-    max_score: int = 10000
+    setup: InputType  # if COM, then expects game parameters passed to Game.__init__(), else get_game_data() is called
+    dice_input = InputType  # if COM, use an RNG; if USER, take input of the dice that are rolled
+    players: dict[str: Player]  # map player names to player
+    max_score: int
+    first_score: int
     last_round: bool = False
 
-    def __init__(self, player_names: list[str], player_types: list[InputType] = None, max_score: int = 10000):
-        self.players = []
-        if not player_types:
-            player_types = [InputType.USER] * len(player_names)
+    def __init__(self, input_type: InputType = InputType.USER, dice_input: InputType = InputType.COM,
+                 player_dict: dict[str: InputType] = None, max_score: int = 10000, entry_score: int = 500):
+        self.setup = input_type
+        if self.setup == InputType.COM:
+            self.dice_input = dice_input
+            self.players = {}
+            for i, player in enumerate(player_dict):
+                self.players[player] = (Player(player, i+1, player_dict[player], 0))  # count from 1 for humans
+            self.max_score = max_score
+            self.entry_score = entry_score
         else:
-            assert len(player_names) == len(player_types)
+            self.get_game_data()
 
-        for name, player_type in zip(player_names, player_types):
-            self.players.append(Player(name, player_type, 0))
+    def get_game_data(self) -> None:
+        """Get terminal-input data for the game."""
+        """get the dice input type for the game:"""
+        while True:
+            match input("Enter REAL for real dice rolls or RNG for simulated dice: ").upper():
+                case "REAL":
+                    self.dice_input = InputType.USER
+                    break
+                case "RNG":
+                    self.dice_input = InputType.COM
+                    break
+                case _:
+                    print("Input not understood; try again.")
 
-        self.max_score = max_score
+        """get the max score for the game:"""
+        while True:
+            try:
+                self.max_score = int(input("Enter the victory score for the game: "))
+                break
+            except ValueError:
+                print("Victory score must be an integer: try again.")
 
-    def score_table(self):
-        msg = "|"
-        for player in self.players:
-            msg += " " + player.name + " " * (9 - len(player.name)) + "|"
-        msg += "\n|"
-        for player in self.players:
-            msg += " " + str(player.score) + " " * (9 - len(str(player.score))) + "|"
+        """get the entry score for the game:"""
+        while True:  # get the entry score
+            try:
+                self.entry_score = int(input("Enter the entry score for the game: "))
+                break
+            except ValueError:
+                print("Entry score must be an integer: try again.")
 
-        return msg
+        """get the players' names and whether or not they're human or computer controlled:"""
+        self.players = {}
+        str_input = ""
+        i = 1
+        while str_input != "start":
+            name = input("Enter the player's name: ")
+            input_type = input("Enter USER if the player is a person or COM for a computer-controlled player: ")
+            match input_type:
+                case "USER":
+                    self.players[name] = Player(name, i, InputType.USER, 0)
+                case "COM":
+                    self.players[name] = Player(name, i, InputType.COM, 0)
+                case _:
+                    print("Bad input; player creation failed: try again.")
+                    continue
+            str_input = input("Enter to add another player, or type 'start' to begin the game: ").lower()
+            i += 1
+
+    def extrn_turn(self, player_name, score) -> None:
+        self.players[player_name].score += score
+
+    def iterate_players(self) -> str:
+        i = 1  # humans count from 1
+        player_name = next(player.name for player in self.players if player.position == i)
+        while True:
+            yield player_name
+            i += 1
+            player_name = next(player.name for player in self.players if player.position == i)
 
     def play(self) -> None:
         final_player, prev_player = None, None
-        for player in cycle(self.players):
-            # TODO: Need to have the condition that it's the players' first turn.
-            print(f"***** {player.name}'s turn: *****")
-            turn = Turn(no_dice=6, input_type=player.input_type, bank=0)
-            while True:
-                turn.bank_scores()
-                # TODO: If this returns no possible scores, turn should end.
-                # TODO: If a 6-dice combo is achieved, this should automatically roll over.
-                while True:
-                    play_on = input("Input r for roll again or e for end turn: ")
-                    if play_on == 'r' or 'e':
-                        break
-                    else:
-                        print("Bad input, try again,")
-                match play_on:
-                    case 'r':
-                        turn.reroll()
-                    case 'e':
-                        player.score += turn.bank
-                        break
+        print("******* Game of Farkell *******")
+        print("\n")
+        in_the_game = {player.name: False for player in self.players}  # have the players scored the initial threshold?
+
+        for player_name in self.iterate_players():
+            print(f"***** {player_name}'s turn: *****")
+
+            if not in_the_game[player_name]:
+                turn_score = turn()  # see below
+                if turn_score > self.entry_score:
+                    in_the_game[player_name] == True
 
             if player == final_player:
                 print("*****" + self.get_winner().name + " has won the game! *****")
@@ -256,3 +229,97 @@ class Game:
 
     def get_winner(self):
         return max(self.players, key=lambda x: x.score)
+
+    def score_table(self):
+        msg = "|"
+        for player in self.players:
+            msg += " " + player.name + " " * (9 - len(player.name)) + "|"
+        msg += "\n|"
+        for player in self.players:
+            msg += " " + str(player.score) + " " * (9 - len(str(player.score))) + "|"
+
+        return msg
+
+
+def bank_scores(possible_scores: list[tuple[int, list[int]]],
+                input_type: InputType = InputType.USER, decisions: list[bool] = None) -> tuple[int, int]:
+    if not possible_scores:
+        print("NO SCORE")
+        return 0, 0
+
+    if len(possible_scores) == 1:
+        print("-Return the name of the scored combo-")
+        return possible_scores[0][0], len(possible_scores[0][1])
+
+    if input_type == InputType.USER:
+        decisions = []
+        decision_map = {'b': True, 'r': False}
+        for score in possible_scores:
+            while True:
+                decision = input(f"Combo: {score}. Enter b for BANK or r for RE-ROLL: ")
+                try:
+                    decisions.append(decision_map[decision])
+                    break
+                except KeyError:
+                    print("Bad input, you need to choose 'b' or 'r'.")
+
+    assert len(possible_scores) == len(decisions), "Different number of decisions and possibilities."
+
+    score = 0
+    dice_to_remove = []
+
+    for possible_score, decision in zip(possible_scores, decisions):
+        if decision:  # True means we have decided to bank the score
+            score += possible_score[0]
+            dice_to_remove += possible_score[1]
+
+    print("-Return the name of the scored combo-")
+    return score, len(dice_to_remove)
+
+
+# TODO: Currently, this can't accept paramter decisions to pass to bank_scores()
+def turn() -> int:
+    """Function for user-controlled, real dice-input turn. Returns the score from the turn."""
+    available_dice, bank = 6, 0
+
+    while True:
+        dice = Roll(InputType.USER, available_dice)
+        """Get the dice roll as user input, and handle the error cases:"""
+        while True:
+            dice_input = [int(c) for c in input("Enter the roll as space-separated integers: ").split()]
+            try:
+                dice.roll(dice_input)
+                break
+            except HandSizeError as hse:
+                if dice.no_dice < hse.size:
+                    print(f"Too many dice added, {hse.size} added but {dice.no_dice} expected.")
+                else:
+                    print(f"Too few dice added, {hse.size} added but {dice.no_dice} expected.")
+            except DiceRangeError as dre:
+                for bad_die in dre.dice:
+                    print(f"Die {bad_die[0]} has value {bad_die[1]}; out of range (expected 1-6).")
+
+        possible_scores = dice.score_breakdown()
+        score, dice_to_remove = bank_scores(possible_scores)
+        if not possible_scores:  # if the player doesn't score, the turn ends and no score is added
+            return 0
+
+        bank += score
+        if dice_to_remove == available_dice:
+            print("ALL DICE SCORED, NEW DICE!")
+            available_dice = 6
+        else:
+            available_dice -= dice_to_remove
+
+        while True:
+            play_on = input("Input r for roll again or e for end turn: ")
+            if play_on == 'r' or 'e':
+                break
+            else:
+                print("Bad input, try again.")
+
+        match play_on:
+            case 'r':
+                continue
+            case 'e':
+                return bank
