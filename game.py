@@ -218,11 +218,13 @@ class Game:
     def play(self) -> None:
         final_player, prev_player = None, None
         for player in cycle(self.players):
-            # TODO: Need to have the condition that it's the players first turn.
+            # TODO: Need to have the condition that it's the players' first turn.
             print(f"***** {player.name}'s turn: *****")
             turn = Turn(no_dice=6, input_type=player.input_type, bank=0)
             while True:
                 turn.bank_scores()
+                # TODO: If this returns no possible scores, turn should end.
+                # TODO: If a 6-dice combo is achieved, this should automatically roll over.
                 while True:
                     play_on = input("Input r for roll again or e for end turn: ")
                     if play_on == 'r' or 'e':
@@ -238,13 +240,19 @@ class Game:
 
             if player == final_player:
                 print("*****" + self.get_winner().name + " has won the game! *****")
+                print(self.score_table())
+                return
 
             if player.score >= self.max_score and not self.last_round:
                 final_player = prev_player
                 self.last_round = True
+                print("***** The last round has begun! *****")
+                print(f"***** Can anyone beat {player.name}'s score of {player.score}? *****")
 
             elif not self.last_round:
                 prev_player = player  # only need to keep track of this if it's not the final round
+
+            print(self.score_table())
 
     def get_winner(self):
         return max(self.players, key=lambda x: x.score)
