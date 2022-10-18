@@ -122,6 +122,7 @@ class Game:
     setup: InputType  # if COM, then expects game parameters passed to Game.__init__(), else get_game_data() is called
     dice_input = InputType  # if COM, use an RNG; if USER, take input of the dice that are rolled
     players: dict[str: Player]  # map player names to player
+    # TODO: keeping the players list as a dictionary introduces a lot of problems later
     max_score: int
     first_score: int
     last_round: bool = False
