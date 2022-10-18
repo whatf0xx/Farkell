@@ -1,6 +1,7 @@
 from dataclasses import dataclass, field
 from random import choices
 from enum import Flag
+from itertools import cycle
 
 import scoring
 
@@ -189,27 +190,34 @@ class Game:
     def extrn_turn(self, player_name, score) -> None:
         self.players[player_name].score += score
 
-    def iterate_players(self) -> str:
-        i = 1  # humans count from 1
-        player_name = next(player.name for player in self.players if player.position == i)
-        while True:
-            yield player_name
-            i += 1
-            player_name = next(player.name for player in self.players if player.position == i)
+    # def iterate_players(self) -> str:
+    #     i = 1  # humans count from 1
+    #     player_name = next(player.name for player in self.players if self.players[player].position == i)
+    #     while True:
+    #         yield player_name
+    #         i = 2 + (i-1) % len(self.players)
+    #         player_name = next(player.name for player in self.players if self.players[player].position == i)
 
     def play(self) -> None:
         final_player, prev_player = None, None
         print("******* Game of Farkell *******")
         print("\n")
-        in_the_game = {player.name: False for player in self.players}  # have the players scored the initial threshold?
+        in_the_game = {player: False for player in self.players}  # have the players scored the initial threshold?
 
-        for player_name in self.iterate_players():
-            print(f"***** {player_name}'s turn: *****")
+        for name in cycle(self.players):
+            player = self.players[name]
+            print(f"***** {player.name}'s turn: *****")
 
-            if not in_the_game[player_name]:
-                turn_score = turn()  # see below
+            turn_score = turn()  # see below
+
+            if not in_the_game[player.name]:
                 if turn_score > self.entry_score:
-                    in_the_game[player_name] == True
+                    in_the_game[player.name] = True
+                    player.score += turn_score
+                else:
+                    print("***** entry score failed! *****")
+            else:
+                player.score += turn_score
 
             if player == final_player:
                 print("*****" + self.get_winner().name + " has won the game! *****")
@@ -228,15 +236,16 @@ class Game:
             print(self.score_table())
 
     def get_winner(self):
-        return max(self.players, key=lambda x: x.score)
+        return max(self.players.values(), key=lambda x: x.score)
 
     def score_table(self):
         msg = "|"
         for player in self.players:
-            msg += " " + player.name + " " * (9 - len(player.name)) + "|"
+            msg += " " + self.players[player].name + " " * (9 - len(self.players[player].name)) + "|"
         msg += "\n|"
         for player in self.players:
-            msg += " " + str(player.score) + " " * (9 - len(str(player.score))) + "|"
+            score_str = str(self.players[player].score)
+            msg += " " + score_str + " " * (9 - len(score_str)) + "|"
 
         return msg
 
@@ -313,7 +322,7 @@ def turn() -> int:
 
         while True:
             play_on = input("Input r for roll again or e for end turn: ")
-            if play_on == 'r' or 'e':
+            if play_on in {'r', 'e'}:
                 break
             else:
                 print("Bad input, try again.")
