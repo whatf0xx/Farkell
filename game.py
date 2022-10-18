@@ -65,22 +65,6 @@ class Roll:
         allowed_dice = range(1, 7)
         return {i: self.dice.count(i) for i in allowed_dice}
 
-    def score_total(self) -> tuple[str, int]:
-        """
-        Get the maximum score for a single roll, and name the score.
-
-        :return: tuple of (roll name, score)
-        """
-        match self.no_dice:
-            # TODO: There is so much repeated code here.
-            case 1: return scoring.score_single(self.dice[0])
-            case 2: return scoring.score_2(self.dice)
-            case 3: return scoring.score_3(self.count())
-            case 4: return scoring.score_4(self.count())
-            case 5: return scoring.score_5(self.count())
-            case 6: return scoring.score_6(self.count())
-            case _: raise HandSizeError(size=self.no_dice)
-
     def score_breakdown(self) -> list[tuple[int, list[int]]]:
         """Method to get the potential scoring options for the hand. Should return a list of tuples,
         containing the scores for each combo as well as the dice involved."""
@@ -108,6 +92,39 @@ class Roll:
             """N.B. scoring tuples are SORTED, based on the score of the combo."""
             return scoring_tuples
         return []
+
+    def score_total(self) -> int:
+        """
+        Get the maximum score for a single roll.
+
+        :return: tuple of (roll name, score)
+        """
+        return sum([score[0] for score in self.score_breakdown()])
+
+    def name_score(self) -> str:
+        score_str = ""
+        no_dice = len(self.dice)
+        if no_dice == 6:
+            combo_6 = scoring.combo_of_6(list(self.count().values()))[0]
+            if combo_6:
+                return combo_6
+
+        combo_name = scoring.name_combo(self.dice)
+        combos = scoring.score_combos(self.dice)
+        if combo_name:
+            score_str += combo_name
+            remaining_dice = [dice for dice in self.dice if dice not in combos[1]]
+        else:
+            remaining_dice = self.dice
+
+        misc = scoring.name_misc(remaining_dice)
+
+        if misc:
+            score_str += " AND " + misc
+
+        if not score_str:
+            return "NO SCORE"
+        return score_str
 
 
 @dataclass
@@ -287,7 +304,7 @@ def bank_scores(possible_scores: list[tuple[int, list[int]]],
     return score, len(dice_to_remove)
 
 
-# TODO: Currently, this can't accept paramter decisions to pass to bank_scores()
+# TODO: Currently, this can't accept parameter decisions to pass to bank_scores()
 def turn() -> int:
     """Function for user-controlled, real dice-input turn. Returns the score from the turn."""
     available_dice, bank = 6, 0
