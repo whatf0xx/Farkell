@@ -39,6 +39,22 @@ class Roll:
             self.dice = dice
             self.check()
 
+    def get_input(self) -> None:
+        assert self.input_type == InputType.USER, "Should only get user input for a user-input roll."
+        while True:
+            dice_input = [int(c) for c in input("Enter the roll as space-separated integers: ").split()]
+            try:
+                self.roll(dice_input)
+                break
+            except HandSizeError as hse:
+                if self.no_dice < hse.size:
+                    print(f"Too many dice added, {hse.size} added but {self.no_dice} expected.")
+                else:
+                    print(f"Too few dice added, {hse.size} added but {self.no_dice} expected.")
+            except DiceRangeError as dre:
+                for bad_die in dre.dice:
+                    print(f"Die {bad_die[0]} has value {bad_die[1]}; out of range (expected 1-6).")
+
     def remove_dice(self, dice_to_remove) -> None:
         self.no_dice -= dice_to_remove
 
@@ -177,20 +193,7 @@ class Player:
 
         while True:
             dice = Roll(InputType.USER, available_dice)
-            """Get the dice roll as user input, and handle the error cases:"""
-            while True:
-                dice_input = [int(c) for c in input("Enter the roll as space-separated integers: ").split()]
-                try:
-                    dice.roll(dice_input)
-                    break
-                except HandSizeError as hse:
-                    if dice.no_dice < hse.size:
-                        print(f"Too many dice added, {hse.size} added but {dice.no_dice} expected.")
-                    else:
-                        print(f"Too few dice added, {hse.size} added but {dice.no_dice} expected.")
-                except DiceRangeError as dre:
-                    for bad_die in dre.dice:
-                        print(f"Die {bad_die[0]} has value {bad_die[1]}; out of range (expected 1-6).")
+            dice.get_input()
 
             possible_scores = dice.score_breakdown()
 
