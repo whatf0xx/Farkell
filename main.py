@@ -13,11 +13,11 @@ if __name__ == "__main__":
     # sample_turn.reroll()
     # print(sample_turn)
 
-    # sample_game = game.Game()
-    # sample_game.play()
+    sample_game = game.Game()
+    sample_game.play()
 
-    roll = game.Roll(game.InputType.USER, 6, [1, 2, 3, 4, 5, 6])
-    print(roll)
+    # roll = game.Roll(game.InputType.USER, 6, [1, 2, 3, 4, 5, 6])
+    # print(roll)
     # roll.roll([2, 3, 4, 3, 2, 2])
     # print(roll.score_breakdown())
     # print(game.bank_scores(roll.score_breakdown()))
