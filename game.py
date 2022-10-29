@@ -163,6 +163,9 @@ class Player:
     def set_possible_scores(self, possible_scores: list[tuple[int, list[int]]]):
         self.possible_scores = possible_scores
 
+    def set_strategy(self, strategy: str):
+        self.strategy = strategy
+
     def get_decisions(self):
         if self.input_type == InputType.USER:
             self.get_user_decisions()
@@ -190,10 +193,13 @@ class Player:
         self.decisions = decisions
 
     def get_com_decisions(self):
-        return [bool(self.get_strategy()) for score in self.possible_scores]
-
-    def get_strategy(self):
-        self.strategy = randint(0, 1)  # just make a random decision to bank or keep a roll
+        match self.strategy:
+            case "LAZY-BANK":
+                self.decisions = [True] * len(self.possible_scores)
+                self.continue_turn = False
+            case "RANDOM":
+                self.decisions = [bool(randint(0, 1)) for score in self.possible_scores]
+                self.continue_turn = bool(randint(0, 1))
 
     def bank_scores(self) -> tuple[int, list[int]]:
         """
@@ -203,7 +209,7 @@ class Player:
 
         :return: tuple of the score, and the dice involved in the score.
         """
-        self.get_decisions()
+        # self.get_decisions()
 
         assert len(self.possible_scores) == len(self.decisions), "Different number of decisions and possible scores."
 
@@ -234,6 +240,7 @@ class Player:
             elif len(self.possible_scores) == 1:  # with one score we ALWAYS bank
                 score, dice_to_remove = self.possible_scores[0]
             else:
+                self.get_decisions()
                 score, dice_to_remove = self.bank_scores()
 
             print(Roll(InputType.COM, len(dice_to_remove), dice_to_remove).name_score())
