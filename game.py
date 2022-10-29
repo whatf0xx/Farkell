@@ -158,7 +158,7 @@ class Player:
 
         self.possible_scores = []  # list[tuple[int, list[int]]]
         self.decisions = []  # list[bool]
-        self.continue_turn = False  # roll again or end turn?
+        self.play_on = False  # roll again or end turn?
 
     def set_possible_scores(self, possible_scores: list[tuple[int, list[int]]]):
         self.possible_scores = possible_scores
@@ -167,17 +167,17 @@ class Player:
         self.strategy = strategy
 
     def get_decisions(self):
-        if self.input_type == InputType.USER:
-            self.get_user_decisions()
-        self.get_com_decisions()
-
-    def get_user_decisions(self):
         if not self.possible_scores:
             raise ValueError("No scores passed with which to make decision.")
 
         if len(self.possible_scores) == 1:
             raise ValueError("Single score is always banked; no decision to make.")
 
+        if self.input_type == InputType.USER:
+            self.get_user_decisions()
+        self.get_com_decisions()
+
+    def get_user_decisions(self):
         decision_map = {'b': True, 'r': False}
         decisions = []
 
@@ -194,12 +194,30 @@ class Player:
 
     def get_com_decisions(self):
         match self.strategy:
-            case "LAZY-BANK":
-                self.decisions = [True] * len(self.possible_scores)
-                self.continue_turn = False
-            case "RANDOM":
-                self.decisions = [bool(randint(0, 1)) for score in self.possible_scores]
-                self.continue_turn = bool(randint(0, 1))
+            case "LAZY-BANK": self.decisions = [True] * len(self.possible_scores)
+            case "RANDOM": self.decisions = [bool(randint(0, 1)) for score in self.possible_scores]
+
+    def get_play_on(self):
+        if self.input_type == InputType.USER:
+            self.user_play_on()
+        self.com_play_on()
+
+    def user_play_on(self):
+        while True:
+            play_on = input("Input r for roll again or e for end turn: ")
+            if play_on in {'r', 'e'}:
+                break
+            else:
+                print("Bad input, try again.")
+
+        match play_on:
+            case 'r': self.play_on = True
+            case 'e': self.play_on = False
+
+    def com_play_on(self):
+        match self.strategy:
+            case "LAZY-BANK": self.play_on = True
+            case "RANDOM": self.play_on = bool(randint(0, 1))
 
     def bank_scores(self) -> tuple[int, list[int]]:
         """
@@ -252,19 +270,12 @@ class Player:
             else:
                 available_dice -= len(dice_to_remove)
 
-            while True:
-                play_on = input("Input r for roll again or e for end turn: ")
-                if play_on in {'r', 'e'}:
-                    break
-                else:
-                    print("Bad input, try again.")
+            self.get_play_on()
 
-            match play_on:
-                case 'r':
-                    continue
-                case 'e':
-                    self.score += bank
-                    return bank
+            if self.play_on:
+                continue
+            self.score += bank
+            return bank
 
 
 class Game:
