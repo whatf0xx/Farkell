@@ -145,42 +145,72 @@ class Roll:
         return score_str
 
 
-@dataclass
 class Player:
-    name: str
-    position: int  # where the player is 'sat' in the circle, not how well he is doing etc.
-    input_type: InputType
-    score: int = 0
-    strategy = None
 
-    def get_decisions(self, possible_scores: list[tuple[int, list[int]]]) -> list[bool]:
+    def __init__(self, name, position, input_type, dice_type, strategy=None):
+        self.name = name
+        self.position = position  # where the player is 'sat' in the circle, not how well he is doing etc.
+        self.input_type = input_type
+        self.dice_type = dice_type
+        self.strategy = strategy
+
+        self.score = 0
+
+        self.possible_scores = []  # list[tuple[int, list[int]]]
+        self.decisions = []  # list[bool]
+        self.continue_turn = False  # roll again or end turn?
+
+    def set_possible_scores(self, possible_scores: list[tuple[int, list[int]]]):
+        self.possible_scores = possible_scores
+
+    def get_decisions(self):
         if self.input_type == InputType.USER:
-            return get_user_decisions(possible_scores)
-        return self.get_com_decisions(possible_scores)
+            self.get_user_decisions()
+        self.get_com_decisions()
+
+    def get_user_decisions(self):
+        if not self.possible_scores:
+            raise ValueError("No scores passed with which to make decision.")
+
+        if len(self.possible_scores) == 1:
+            raise ValueError("Single score is always banked; no decision to make.")
+
+        decision_map = {'b': True, 'r': False}
+        decisions = []
+
+        for score in self.possible_scores:
+            while True:
+                decision = input(f"Combo: {score}. Enter b for BANK or r for RE-ROLL: ")
+                try:
+                    decisions.append(decision_map[decision])
+                    break
+                except KeyError:
+                    print("Bad input, you need to choose 'b' or 'r'.")
+
+        self.decisions = decisions
+
+    def get_com_decisions(self):
+        return [bool(self.get_strategy()) for score in self.possible_scores]
 
     def get_strategy(self):
         self.strategy = randint(0, 1)  # just make a random decision to bank or keep a roll
 
-    def get_com_decisions(self, possible_scores):
-        return [bool(self.get_strategy()) for score in possible_scores]
-
-    def bank_scores(self, possible_scores: list[tuple[int, list[int]]]) -> tuple[int, list[int]]:
+    def bank_scores(self) -> tuple[int, list[int]]:
         """
         Decide and subsequently bank possible scores in a hand of Farkell. Should take the possible scores as input (of
         which there should always be at least 2, as a single score always gets banked) and return the score and the
         dice to bank.
 
-        :param possible_scores:
         :return: tuple of the score, and the dice involved in the score.
         """
-        decisions = self.get_decisions(possible_scores)
+        self.get_decisions()
 
-        assert len(possible_scores) == len(decisions), "Different number of decisions and possible scores."
+        assert len(self.possible_scores) == len(self.decisions), "Different number of decisions and possible scores."
 
         score = 0
         dice_to_remove = []
 
-        for possible_score, decision in zip(possible_scores, decisions):
+        for possible_score, decision in zip(self.possible_scores, self.decisions):
             if decision:  # True means we have decided to bank the score
                 score += possible_score[0]
                 dice_to_remove += possible_score[1]
@@ -192,17 +222,19 @@ class Player:
         available_dice, bank = 6, 0
 
         while True:
-            dice = Roll(InputType.USER, available_dice)
+            dice = Roll(self.dice_type, available_dice)
             dice.get_input()
 
-            possible_scores = dice.score_breakdown()
+            # possible_scores = dice.score_breakdown()
+            self.set_possible_scores(dice.score_breakdown())
 
-            if not possible_scores:  # if the player doesn't score, the turn ends and no score is added
+            if not self.possible_scores:  # if the player doesn't score, the turn ends and no score is added
+                print("NO SCORE! TURN ENDS.")
                 return 0
-            elif len(possible_scores) == 1:  # with one score we ALWAYS bank
-                score, dice_to_remove = possible_scores[0]
+            elif len(self.possible_scores) == 1:  # with one score we ALWAYS bank
+                score, dice_to_remove = self.possible_scores[0]
             else:
-                score, dice_to_remove = self.bank_scores(possible_scores)
+                score, dice_to_remove = self.bank_scores()
 
             print(Roll(InputType.COM, len(dice_to_remove), dice_to_remove).name_score())
             bank += score
@@ -224,6 +256,7 @@ class Player:
                 case 'r':
                     continue
                 case 'e':
+                    self.score += bank
                     return bank
 
 
@@ -363,25 +396,3 @@ class Game:
             msg += " " + score_str + " " * (9 - len(score_str)) + "|"
 
         return msg
-
-
-def get_user_decisions(possible_scores: list[tuple[int, list[int]]]) -> list[bool]:
-    if not possible_scores:
-        raise ValueError("No scores passed with which to make decision.")
-
-    if len(possible_scores) == 1:
-        raise ValueError("Single score is always banked; no decision to make.")
-
-    decision_map = {'b': True, 'r': False}
-    decisions = []
-
-    for score in possible_scores:
-        while True:
-            decision = input(f"Combo: {score}. Enter b for BANK or r for RE-ROLL: ")
-            try:
-                decisions.append(decision_map[decision])
-                break
-            except KeyError:
-                print("Bad input, you need to choose 'b' or 'r'.")
-
-    return decisions
