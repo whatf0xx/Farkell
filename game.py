@@ -137,7 +137,7 @@ class Player:
     def get_com_decisions(self):
         match self.strategy:
             case "LAZY-BANK": self.decisions = [True] * len(self.possible_scores)
-            case "RANDOM": self.decisions = [bool(randint(0, 1)) for score in self.possible_scores]
+            case "RANDOM": self.decisions = [bool(randint(0, 1)) for _ in self.possible_scores]
 
     def get_play_on(self):
         if self.input_type == InputType.USER:
@@ -312,6 +312,7 @@ class GameMaker(AbstractFactory):
         self.set_defaults()
 
         if pkl_file:
+            del self.game_args["players"]["Player 1"]  # don't want to include the default player
             self.get_from_pkl(pkl_file)
 
         if not kwargs:

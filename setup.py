@@ -15,7 +15,7 @@ class AbstractFactory(ABC):
     params = {"dice_input": InputType,
               "max_score": int,
               "entry_score": int,
-              "players": dict[str: (InputType | tuple[InputType, str])]
+              "players": dict  # TODO: implement internal type checking for the dictionary
               }
 
     defaults = [InputType.USER,
@@ -88,7 +88,6 @@ class AbstractFactory(ABC):
     def get_from_pkl(self, filepath):
         with open(filepath, 'rb') as file:
             pickle_dict = pickle.load(file)
-
         for entry in pickle_dict:
             if type(pickle_dict[entry]) == self.params[entry]:
                 self.game_args[entry] = pickle_dict[entry]
