@@ -1,8 +1,8 @@
 import game
 
 if __name__ == "__main__":
-    sample_roll = game.Roll(game.InputType.USER)
-    print(sample_roll.name_score())
+    # sample_roll = game.Roll(game.InputType.USER)
+    # print(sample_roll.name_score())
 
     # sample_roll = game.Roll(6, [2, 3, 4, 6, 6, 2])
     # print(sample_roll)
@@ -15,8 +15,9 @@ if __name__ == "__main__":
     # sample_turn.reroll()
     # print(sample_turn)
 
-    # sample_game = game.Game()
-    # sample_game.play()
+    sample_game = game.Game()
+    print(sample_game.dice_input)
+    sample_game.play()
 
     # roll = game.Roll(game.InputType.USER, 6, [1, 2, 3, 4, 5, 6])
     # print(roll)

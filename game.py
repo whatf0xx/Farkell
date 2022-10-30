@@ -2,8 +2,10 @@ from dataclasses import dataclass, field
 from random import choices, randint
 from enum import Flag
 from itertools import cycle
+from collections import namedtuple
 
 import scoring
+from errors import HandSizeError, DiceRangeError
 
 
 class InputType(Flag):
@@ -11,14 +13,7 @@ class InputType(Flag):
     COM = True
 
 
-@dataclass
-class HandSizeError(ValueError):
-    size: int
-
-
-@dataclass
-class DiceRangeError(ValueError):
-    dice: list[tuple[int, int]]
+Score = namedtuple("Score", ["value", "dice"])
 
 
 @dataclass
@@ -150,8 +145,8 @@ class Player:
     def __init__(self, name, position, input_type, dice_type, strategy=None):
         self.name = name
         self.position = position  # where the player is 'sat' in the circle, not how well he is doing etc.
-        self.input_type = input_type
         self.dice_type = dice_type
+        self.input_type = input_type
         self.strategy = strategy
 
         self.score = 0
@@ -288,13 +283,14 @@ class Game:
     last_round: bool = False
 
     def __init__(self, input_type: InputType = InputType.USER, dice_input: InputType = InputType.COM,
-                 player_dict: dict[str: InputType] = None, max_score: int = 10000, entry_score: int = 500):
+                 player_input: dict[str: (InputType | tuple[InputType, str])] = None,
+                 max_score: int = 10000, entry_score: int = 500):
         self.setup = input_type
         if self.setup == InputType.COM:
             self.dice_input = dice_input
             self.players = {}
-            for i, player in enumerate(player_dict):
-                self.players[player] = (Player(player, i+1, player_dict[player], 0))  # count from 1 for humans
+            for i, player in enumerate(player_input):
+                self.players[player] = (Player(player, i+1, player_input[player], dice_input, ))
             self.max_score = max_score
             self.entry_score = entry_score
         else:
@@ -351,14 +347,6 @@ class Game:
     # def extrn_turn(self, player_name, score) -> None:
     #     self.players[player_name].score += score
 
-    def get_prev_player(self, player: Player) -> str:  # this is a horrible way to do this, but works for now
-        current_pos = player.position
-        for name in self.players:
-            if self.players[name].position == (current_pos - 2) % len(self.players) + 1:
-                return name
-        else:
-            raise ValueError("Couldn't find the previous player.")
-
     def game_end(self, player: Player) -> bool:
         if player == self.final_player:
             return True
@@ -374,7 +362,7 @@ class Game:
             player = self.players[name]
             print(f"***** {player.name}'s turn: *****")
 
-            turn_score = player.turn()  # see below
+            turn_score = player.turn()
 
             if not in_the_game[player.name]:
                 if turn_score > self.entry_score:
