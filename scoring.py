@@ -4,6 +4,20 @@ as a list of ints between 1 and 6 (inclusive, obviously) and return a list of tu
 the score as an int, and the dice that score as another list of ints.
 """
 
+from typing import NamedTuple
+
+
+class Score(NamedTuple):
+    """Score of a set of dice in Farkell, consists of the value of the score and the dice that compose it."""
+    value: int
+    dice: list[int]
+
+
+class Combo6(NamedTuple):
+    """Score and name for a combo of 6 dice in Farkell."""
+    name: str
+    score: int
+
 
 def count(dice: list[int]) -> dict[int: int]:
     """
@@ -15,7 +29,22 @@ def count(dice: list[int]) -> dict[int: int]:
     return {i: dice.count(i) for i in range(1, 7)}
 
 
-def score_misc(dice: list[int]) -> list[tuple[int, list[int]]]:
+def combo_of_6(counts: list[int]) -> Combo6:
+    """Calculate scores for combinations of 6 dice."""
+    if counts.count(1) == 6:
+        return Combo6("ONE-TO-SIX STRAIGHT", 1500)
+    elif counts.count(3) == 2:
+        return Combo6("TWO TRIPLES", 2500)
+    elif counts.count(2) == 3 or (counts.count(4) == 1 and counts.count(2) == 1):
+        """For clarification, a 4-of-a-kind with a double counts as a 3-pair."""
+        return Combo6("THREE PAIRS", 1500)
+    elif counts.count(6) == 1:
+        return Combo6("SIX OF A KIND", 3000)
+    else:
+        return Combo6("", 0)
+
+
+def score_misc(dice: list[int]) -> list[Score]:
     """
     Score a hand of dice which has no combinations, i.e. it has only single or double 1s and 5s.
 
@@ -26,14 +55,14 @@ def score_misc(dice: list[int]) -> list[tuple[int, list[int]]]:
     score = []
     for die in dice:
         if die == 1:
-            score.append((100, [1]))
+            score.append(Score(100, [1]))
         elif die == 5:
-            score.append((50, [5]))
+            score.append(Score(50, [5]))
 
     return score
 
 
-def score_combos(dice: list[int]) -> tuple[int, list[int]]:
+def score_combos(dice: list[int]) -> Score:
     """
     Score the combos in a hand of dice, excluding the 6-dice combos, i.e. the provided roll does not have
     2 triples, a straight, 6 of a kind etc.
@@ -47,16 +76,40 @@ def score_combos(dice: list[int]) -> tuple[int, list[int]]:
         match counts[i]:
             case 3:
                 if i == 1:
-                    return 300, [1, 1, 1]
-                return i * 100, [i, i, i]
+                    return Score(300, [1, 1, 1])
+                return Score(i * 100, [i, i, i])
             case 4:
-                return 1000, [i] * 4
+                return Score(1000, [i] * 4)
             case 5:
-                return 2000, [i] * 5
+                return Score(2000, [i] * 5)
             case _:
                 pass
 
-    return 0, []
+    return Score(0, [])
+
+
+def score_hand(dice: list[int]) -> list[Score]:
+    no_dice = len(dice)
+    if no_dice == 6:
+        combo_6 = combo_of_6(list(count(dice).values()))
+        if combo_6.name:
+            return [Score(combo_6.score, dice)]  # if we have a combo of 6, we're done
+
+    scores = []
+    combos = score_combos(dice)
+    if combos.dice:  # check that a combo was scored, else this is empty
+        scores.append(combos)
+        remaining_dice = [d for d in dice if d not in combos.dice]
+    else:
+        remaining_dice = dice
+
+    misc = score_misc(remaining_dice)
+    if misc:
+        scores += misc
+
+    scores.sort()
+    """N.B. scoring tuples are SORTED, based on the score of the combo."""
+    return scores
 
 
 def name_misc(dice: list[int]) -> str:
@@ -101,16 +154,29 @@ def name_combo(dice: list[int]) -> str:
     return ""
 
 
-def combo_of_6(counts: list[int]) -> tuple[str, int]:
-    """Calculate scores for combinations of 6 dice."""
-    if counts.count(1) == 6:
-        return "ONE-TO-SIX STRAIGHT", 1500
-    elif counts.count(3) == 2:
-        return "TWO TRIPLES", 2500
-    elif counts.count(2) == 3 or (counts.count(4) == 1 and counts.count(2) == 1):
-        """For clarification, a 4-of-a-kind with a double counts as a 3-pair."""
-        return "THREE PAIRS", 1500
-    elif counts.count(6) == 1:
-        return "SIX OF A KIND", 3000
+def name_hand(dice: list[int]) -> str:
+    score_str = ""
+    no_dice = len(dice)
+    if no_dice == 6:
+        combo_6 = combo_of_6(list(count(dice).values())).name
+        if combo_6:
+            return combo_6
+
+    combo_name = name_combo(dice)
+    combos = score_combos(dice)
+    if combo_name:
+        score_str += combo_name
+        remaining_dice = [d for d in dice if dice not in combos.dice]
     else:
-        return "", 0
+        remaining_dice = dice
+
+    misc = name_misc(remaining_dice)
+
+    if score_str and misc:
+        score_str += " AND " + misc
+    elif misc:
+        score_str = misc
+
+    if not score_str:
+        return "NO SCORE"
+    return score_str

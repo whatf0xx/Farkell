@@ -1,19 +1,10 @@
 from dataclasses import dataclass, field
 from random import choices, randint
-from enum import Flag
 from itertools import cycle
-from collections import namedtuple
 
-import scoring
+from scoring import Score, score_hand, name_hand
 from errors import HandSizeError, DiceRangeError
-
-
-class InputType(Flag):
-    USER = False
-    COM = True
-
-
-Score = namedtuple("Score", ["value", "dice"])
+from setup import InputType
 
 
 @dataclass
@@ -76,33 +67,11 @@ class Roll:
         allowed_dice = range(1, 7)
         return {i: self.dice.count(i) for i in allowed_dice}
 
-    def score_breakdown(self) -> list[tuple[int, list[int]]]:
+    def score_breakdown(self) -> list[Score]:
         """Method to get the potential scoring options for the hand. Should return a list of tuples,
         containing the scores for each combo as well as the dice involved."""
         """ First, check if there are any combos of 6 dice:"""
-        scoring_tuples = []
-        no_dice = len(self.dice)
-        if no_dice == 6:
-            combo_6 = scoring.combo_of_6(list(self.count().values()))
-            if combo_6[0]:
-                return [(combo_6[1], self.dice)]  # if we have a combo of 6, we're done
-
-        combos = scoring.score_combos(self.dice)
-        if combos[1]:
-            scoring_tuples.append(combos)
-            remaining_dice = [dice for dice in self.dice if dice not in combos[1]]
-        else:
-            remaining_dice = self.dice
-
-        misc = scoring.score_misc(remaining_dice)
-        if misc:
-            scoring_tuples += misc
-
-        if scoring_tuples:
-            scoring_tuples.sort()
-            """N.B. scoring tuples are SORTED, based on the score of the combo."""
-            return scoring_tuples
-        return []
+        return score_hand(self.dice)
 
     def score_total(self) -> int:
         """
@@ -110,34 +79,10 @@ class Roll:
 
         :return: tuple of (roll name, score)
         """
-        return sum([score[0] for score in self.score_breakdown()])
+        return sum([score.value for score in self.score_breakdown()])
 
     def name_score(self) -> str:
-        score_str = ""
-        no_dice = len(self.dice)
-        if no_dice == 6:
-            combo_6 = scoring.combo_of_6(list(self.count().values()))[0]
-            if combo_6:
-                return combo_6
-
-        combo_name = scoring.name_combo(self.dice)
-        combos = scoring.score_combos(self.dice)
-        if combo_name:
-            score_str += combo_name
-            remaining_dice = [dice for dice in self.dice if dice not in combos[1]]
-        else:
-            remaining_dice = self.dice
-
-        misc = scoring.name_misc(remaining_dice)
-
-        if score_str and misc:
-            score_str += " AND " + misc
-        elif misc:
-            score_str = misc
-
-        if not score_str:
-            return "NO SCORE"
-        return score_str
+        return name_hand(self.dice)
 
 
 class Player:
