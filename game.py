@@ -307,16 +307,14 @@ class GameMaker(AbstractFactory):
     def new_game(self, pkl_file=None, kwargs=None) -> Game:
         if self.input_type == InputType.USER:
             self.get_terminal_input()
-            return Game(**self.game_args)
-
-        self.set_defaults()
 
         if pkl_file:
-            del self.game_args["players"]["Player 1"]  # don't want to include the default player
             self.get_from_pkl(pkl_file)
 
         if not kwargs:
             return Game(**self.game_args)
+
+        self.set_defaults()
 
         for kwarg in kwargs:
             self.game_args[kwarg] = kwargs[kwarg]

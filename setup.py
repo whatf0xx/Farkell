@@ -1,5 +1,6 @@
 from enum import Flag
 from abc import ABC
+from typing import TypedDict
 import pickle
 
 
@@ -32,7 +33,8 @@ class AbstractFactory(ABC):
 
     def set_defaults(self):
         for param, default in zip(self.params, self.defaults):
-            self.game_args[param] = default
+            if param not in self.game_args:
+                self.game_args[param] = default
 
     def get_terminal_input(self):
         """Get terminal-input data for the game."""
