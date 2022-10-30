@@ -1,0 +1,13 @@
+REAL
+10000
+500
+Harry
+USER
+
+Leonie
+USER
+
+FarkellBot
+COM
+LAZY-BANK
+start

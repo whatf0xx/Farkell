@@ -38,3 +38,19 @@ def test_bot_creation():
     assert sample_game.players[2].strategy == "RANDOM"
     assert sample_game.players[3].input_type == InputType.COM
     assert sample_game.players[3].strategy == "LAZY-BANK"
+
+
+def test_user_input_creation(monkeypatch):
+    def reader(filepath):
+        with open(filepath, "r") as file:
+            for line in file:
+                yield line.rstrip("\n")
+
+    clipboard = reader("user_creation.txt")
+    monkeypatch.setattr('builtins.input', lambda _: next(clipboard))
+
+    sample_game = GameMaker().new_game()
+    assert isinstance(sample_game, Game)
+    assert sample_game.dice_input == InputType.USER
+    assert sample_game.players[0].name == "Harry"
+    assert sample_game.players[2].strategy == "LAZY-BANK"
