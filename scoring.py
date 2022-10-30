@@ -1,7 +1,8 @@
 """
 Calculate the score for a given hand in Farkell. Should take as input the hand
 as a list of ints between 1 and 6 (inclusive, obviously) and return a list of tuples of
-the score as an int, and the dice that score as another list of ints.
+the score as an int, and the dice that score as another list of ints. This is wrapped up
+into a named tuple called a Score. Also provides functions for naming a hand or a score.
 """
 
 from typing import NamedTuple

@@ -4,7 +4,7 @@ from itertools import cycle
 
 from scoring import Score, score_hand, name_hand
 from errors import HandSizeError, DiceRangeError
-from setup import InputType
+from setup import InputType, AbstractFactory
 
 
 @dataclass
@@ -86,21 +86,23 @@ class Roll:
 
 
 class Player:
-
-    def __init__(self, name, position, input_type, dice_type, strategy=None):
+    def __init__(self, name, dice_type, input_type, strategy=None):
         self.name = name
-        self.position = position  # where the player is 'sat' in the circle, not how well he is doing etc.
         self.dice_type = dice_type
+
         self.input_type = input_type
         self.strategy = strategy
 
         self.score = 0
 
-        self.possible_scores = []  # list[tuple[int, list[int]]]
-        self.decisions = []  # list[bool]
-        self.play_on = False  # roll again or end turn?
+        self.possible_scores = []
+        self.decisions = []
+        self.play_on = False
 
-    def set_possible_scores(self, possible_scores: list[tuple[int, list[int]]]):
+    def __hash__(self):
+        return hash(self.name)
+
+    def set_possible_scores(self, possible_scores: list[Score]):
         self.possible_scores = possible_scores
 
     def set_strategy(self, strategy: str):
@@ -219,81 +221,34 @@ class Player:
 
 
 class Game:
-    setup: InputType  # if COM, then expects game parameters passed to Game.__init__(), else get_game_data() is called
-    dice_input = InputType  # if COM, use an RNG; if USER, take input of the dice that are rolled
-    players: dict[str: Player]  # map player names to player
-    max_score: int
-    first_score: int
-    final_player: Player = None
-    last_round: bool = False
+    """Class for a game of Farkell."""
+    def __init__(self,
+                 dice_input: InputType = InputType.COM,
+                 max_score: int = 10000,
+                 entry_score: int = 500,
+                 players: dict[str: (InputType | tuple[InputType, str])] = None):
 
-    def __init__(self, input_type: InputType = InputType.USER, dice_input: InputType = InputType.COM,
-                 player_input: dict[str: (InputType | tuple[InputType, str])] = None,
-                 max_score: int = 10000, entry_score: int = 500):
-        self.setup = input_type
-        if self.setup == InputType.COM:
-            self.dice_input = dice_input
-            self.players = {}
-            for i, player in enumerate(player_input):
-                self.players[player] = (Player(player, i+1, player_input[player], dice_input, ))
-            self.max_score = max_score
-            self.entry_score = entry_score
-        else:
-            self.get_game_data()
+        self.dice_input = dice_input
+        self.max_score = max_score
+        self.entry_score = entry_score
 
-    def get_game_data(self) -> None:
-        """Get terminal-input data for the game."""
-        """get the dice input type for the game:"""
-        while True:
-            match input("Enter REAL for real dice rolls or RNG for simulated dice: ").upper():
-                case "REAL":
-                    self.dice_input = InputType.USER
-                    break
-                case "RNG":
-                    self.dice_input = InputType.COM
-                    break
-                case _:
-                    print("Input not understood; try again.")
+        assert len(players) == len(set(players)), "Player names must be unique."
+        self.players = []  # dictionary that maps player_name: Player
+        for name in players:
+            if players[name] == InputType.USER:
+                self.players.append(Player(name, self.dice_input, players[name]))
+            else:
+                self.players.append(Player(name, self.dice_input, *players[name]))
 
-        """get the max score for the game:"""
-        while True:
-            try:
-                self.max_score = int(input("Enter the victory score for the game: "))
-                break
-            except ValueError:
-                print("Victory score must be an integer: try again.")
-
-        """get the entry score for the game:"""
-        while True:  # get the entry score
-            try:
-                self.entry_score = int(input("Enter the entry score for the game: "))
-                break
-            except ValueError:
-                print("Entry score must be an integer: try again.")
-
-        """get the players' names and whether or not they're human or computer controlled:"""
-        self.players = {}
-        str_input = ""
-        i = 1
-        while str_input != "start":
-            name = input("Enter the player's name: ")
-            input_type = input("Enter USER if the player is a person or COM for a computer-controlled player: ")
-            match input_type:
-                case "USER":
-                    self.players[name] = Player(name, i, InputType.USER, 0)
-                case "COM":
-                    self.players[name] = Player(name, i, InputType.COM, 0)
-                case _:
-                    print("Bad input; player creation failed: try again.")
-                    continue
-            str_input = input("Enter to add another player, or type 'start' to begin the game: ").lower()
-            i += 1
+        self.current_player = self.players[0]
+        self.final_player = None
+        self.last_round = False
 
     # def extrn_turn(self, player_name, score) -> None:
     #     self.players[player_name].score += score
 
-    def game_end(self, player: Player) -> bool:
-        if player == self.final_player:
+    def game_end(self) -> bool:
+        if self.current_player == self.final_player:
             return True
         return False
 
@@ -303,8 +258,7 @@ class Game:
         print("\n")
         in_the_game = {player: False for player in self.players}  # have the players scored the initial threshold?
 
-        for name in cycle(self.players):
-            player = self.players[name]
+        for player in cycle(self.players):
             print(f"***** {player.name}'s turn: *****")
 
             turn_score = player.turn()
@@ -318,7 +272,7 @@ class Game:
             else:
                 player.score += turn_score
 
-            if self.game_end(player):
+            if self.game_end():
                 print("***** " + self.get_winner().name + " has won the game! *****")
                 print(self.score_table())
                 return
@@ -334,16 +288,35 @@ class Game:
 
             print(self.score_table())
 
-    def get_winner(self):
-        return max(self.players.values(), key=lambda x: x.score)
+    def get_winner(self) -> Player:
+        return max(self.players, key=lambda x: x.score)
 
-    def score_table(self):
+    def score_table(self) -> str:
         msg = "|"
         for player in self.players:
-            msg += " " + self.players[player].name + " " * (9 - len(self.players[player].name)) + "|"
+            msg += " " + player.name + " " * (9 - len(player.name)) + "|"
         msg += "\n|"
         for player in self.players:
-            score_str = str(self.players[player].score)
+            score_str = str(player.score)
             msg += " " + score_str + " " * (9 - len(score_str)) + "|"
 
         return msg
+
+
+class GameMaker(AbstractFactory):
+    def new_game(self, pkl_file=None, kwargs=None) -> Game:
+        if self.input_type == InputType.USER:
+            self.get_terminal_input()
+            return Game(**self.game_args)
+
+        self.set_defaults()
+
+        if pkl_file:
+            self.get_from_pkl(pkl_file)
+
+        if not kwargs:
+            return Game(**self.game_args)
+
+        for kwarg in kwargs:
+            self.game_args[kwarg] = kwargs[kwarg]
+        return Game(**self.game_args)
