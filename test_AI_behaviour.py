@@ -1,4 +1,4 @@
-from game import InputType, Game, GameMaker, Player
+from game import InputType, Player
 
 
 def test_lazy_bank(monkeypatch):
