@@ -133,7 +133,7 @@ def name_misc(dice: list[int]) -> str:
         case 0, 2: return "TWO FIVES"
         case 1, 2: return "A MOOSE AND TWO FIVES"
         case 2, 2: return "TWO MOOSE AND TWO FIVES"
-        case _: raise ValueError(f"unexpected number of ones {ones} and fives {fives} in miscellaneous hand.")
+        case _: raise ValueError(f"unexpected number of ones ({ones}) and fives ({fives}) in miscellaneous hand.")
 
 
 def name_combo(dice: list[int]) -> str:
@@ -167,7 +167,7 @@ def name_hand(dice: list[int]) -> str:
     combos = score_combos(dice)
     if combo_name:
         score_str += combo_name
-        remaining_dice = [d for d in dice if dice not in combos.dice]
+        remaining_dice = [d for d in dice if d not in combos.dice]
     else:
         remaining_dice = dice
 

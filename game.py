@@ -158,7 +158,7 @@ class Player:
 
     def com_play_on(self):
         match self.strategy:
-            case "LAZY-BANK": self.play_on = True
+            case "LAZY-BANK": self.play_on = False
             case "RANDOM": self.play_on = bool(randint(0, 1))
 
     def bank_scores(self) -> tuple[int, list[int]]:
