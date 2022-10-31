@@ -1,6 +1,5 @@
 from enum import Flag
 from abc import ABC
-from typing import TypedDict
 import pickle
 
 
@@ -9,7 +8,7 @@ class InputType(Flag):
     COM = True
 
 
-class AbstractFactory(ABC):
+class AbstractGameFactory(ABC):
     """Class to create a game instance based on function arguments, terminal input or dictionary kwargs (JSON input
     in the future?)."""
 

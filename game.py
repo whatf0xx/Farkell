@@ -4,7 +4,7 @@ from itertools import cycle
 
 from scoring import Score, score_hand, name_hand
 from errors import HandSizeError, DiceRangeError
-from setup import InputType, AbstractFactory
+from setup import InputType, AbstractGameFactory
 
 
 @dataclass
@@ -303,7 +303,7 @@ class Game:
         return msg
 
 
-class GameMaker(AbstractFactory):
+class GameMaker(AbstractGameFactory):
     def new_game(self, pkl_file=None, kwargs=None) -> Game:
         if self.input_type == InputType.USER:
             self.get_terminal_input()
