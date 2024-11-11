@@ -46,7 +46,7 @@ def test_user_input_creation(monkeypatch):
             for line in file:
                 yield line.rstrip("\n")
 
-    clipboard = reader("user_creation.txt")
+    clipboard = reader("../setup/user_creation.txt")
     monkeypatch.setattr('builtins.input', lambda _: next(clipboard))
 
     sample_game = GameMaker().new_game()

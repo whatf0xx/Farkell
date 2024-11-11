@@ -4,7 +4,7 @@ from itertools import cycle
 
 from scoring import Score, score_hand, name_hand
 from errors import HandSizeError, DiceRangeError
-from setup import InputType, AbstractGameFactory
+from setup.setup import InputType, AbstractGameFactory
 
 
 @dataclass
@@ -94,6 +94,7 @@ class Player:
         self.strategy = strategy
 
         self.score = 0
+        self.in_the_game = False
 
         self.possible_scores = []
         self.decisions = []
@@ -256,16 +257,15 @@ class Game:
         final_player, prev_player = None, None
         print("******* Game of Farkell *******")
         print("\n")
-        in_the_game = {player: False for player in self.players}  # have the players scored the initial threshold?
 
         for player in cycle(self.players):
             print(f"***** {player.name}'s turn: *****")
 
             turn_score = player.turn()
 
-            if not in_the_game[player.name]:
+            if not player.in_the_game:
                 if turn_score > self.entry_score:
-                    in_the_game[player.name] = True
+                    player.in_the_game = True
                     player.score += turn_score
                 else:
                     print("***** entry score failed! *****")

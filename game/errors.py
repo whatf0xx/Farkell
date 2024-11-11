@@ -1,3 +1,6 @@
+"""
+Module that holds the errors that are useful for debugging problems in the game mechanics
+"""
 from dataclasses import dataclass
 
 

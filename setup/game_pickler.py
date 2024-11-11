@@ -9,5 +9,5 @@ game_args = {
                 "Leonie": InputType.USER}
 }
 
-with open("basic_setup.pkl", "wb") as file:
+with open("../basic_setup.pkl", "wb") as file:
     pickle.dump(game_args, file)
